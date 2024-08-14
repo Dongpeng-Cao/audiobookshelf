@@ -42,16 +42,24 @@ class Series extends Model {
         }
       }
     }
-    //find series which contains name
+    //find sub series 
     let elems = (await this.findAll({
       where: {
-        name: {
-          [Op.like]: `%${name}%`
-        }
+        [Op.or]: [
+          {
+            name: {
+              [Op.like]: `%${name}/%` 
+            }
+          },
+          {
+            name: name 
+          }
+        ]
       }
     }))
     .map(se => se.getOldSeries())
     .map(se => ({id: se.id, name: se.name}))
+    .sort((a, b) => a.name.length - b.name.length)
 
     const relatedSeries =  Array.from(new Map([...parentsSeries, ...elems].map(item => [item.id, item])).values())
 
