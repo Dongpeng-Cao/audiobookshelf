@@ -97,6 +97,7 @@ class ApiRouter {
     this.router.get('/libraries/:id/opml', LibraryController.middleware.bind(this), LibraryController.getOPMLFile.bind(this))
     this.router.post('/libraries/order', LibraryController.reorder.bind(this))
     this.router.post('/libraries/:id/remove-metadata', LibraryController.middleware.bind(this), LibraryController.removeAllMetadataFiles.bind(this))
+    this.router.post('/libraries/:id/files-normalization', LibraryController.middleware.bind(this), LibraryController.filesNormalization.bind(this))
 
     //
     // Item Routes

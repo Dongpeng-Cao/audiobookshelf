@@ -998,6 +998,107 @@ class LibraryController {
     })
   }
 
+
+  /**
+   * Files normalization
+   *
+   * @param {RequestWithUser} req
+   * @param {Response} res
+   */
+  async filesNormalization(req, res) {
+    if (!req.user.isAdminOrUp) {
+      Logger.error(`[LibraryController] Non-admin user "${req.user.username}" attempted to remove all metadata files`)
+      return res.sendStatus(403)
+    }
+
+    const filesNormalization = req.query.normalization 
+    if(filesNormalization){
+      let fileList = req.body
+    }
+    const libraryItems = await Database.libraryItemModel.findAll({
+      attributes: ['id', 'libraryFiles', 'relPath', 'mediaId'],
+      where: 
+        {
+          libraryId: req.library.id
+        }
+    })
+
+    let files = []
+    // libraryItems.forEach(item =>{
+    //   if(filesNormalization){
+        
+    //   }
+    //   let indent = ''
+    //   const folder = item.relPath.split('/')
+    //   for(let i=0; i<folder.length; i++){
+    //     files.push(indent + '|-- ' + folder[i])
+    //     indent += '    '
+    //   }
+    //   item.libraryFiles.forEach((file) => {
+    //     files.push(indent + '|-- ' + file.metadata.filename)
+    //   })
+    // })
+
+    for (const item of libraryItems){
+        let temp = {}
+        temp.id = item.mediaId
+        temp.relPath = item.relPath
+        const author = await Database.bookAuthorModel.findOne({
+          attributes: [],  
+          include: [
+            {
+              model: Database.authorModel,  
+              required: true,
+              attributes: ['lastFirst'],
+            }
+          ],
+          where: {
+            bookId: item.mediaId
+          }
+        });
+        temp.author = author?.author?.lastFirst
+        const series = await Database.bookSeriesModel.findAll({
+          attributes: ['sequence'],  
+          include: [
+            {
+              model: Database.seriesModel,  
+              required: true,
+              attributes: ['name'],
+            }
+          ],
+          where: {
+            bookId: item.mediaId
+          }
+        });
+        temp.series = []
+        series.forEach(item => {
+          temp.series.push(
+            {
+              sequence : item.sequence,
+              series: item.series?.name
+            }
+          )
+        })
+
+        //temp.nomalizedPath = [temp.author, temp.series, item.relPath.split('/').pop()].join('/')
+        temp.bookFloder = item.relPath.split('/').pop()
+        temp.nomalizedPath = ''
+        temp.leftSide = true
+        temp.hover = false // this is important otherwise vue would not bind this attr and not rerender
+        files.push(temp)
+    }
+
+ 
+
+    //Logger.info(`[LibraryController] Found ${libraryItemsWithMetadata.length} ${metadataFilename} files to remove`)
+
+
+    res.json({
+      files,
+      status: 'ok'
+    })
+  }  
+
   /**
    *
    * @param {RequestWithUser} req
