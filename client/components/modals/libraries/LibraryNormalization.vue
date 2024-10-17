@@ -69,6 +69,7 @@ export default {
           if (data.files) {
             this.filesList = data.files
           }
+          this.$toast.success(`Successful to normalize the book`)
         })
         .catch((error) => {
           this.$toast.error('Failed to remove metadata files')
@@ -105,8 +106,16 @@ export default {
       file.hover = false
     },
     normalizePath(file, series) {
-      file.nomalizedPath = [file.author, series.series + (series.sequence === null ? '' : '#' + series.sequence), file.bookFloder].join('/')
-      file.leftSide = false
+      if (series.series === 'No Series') {
+        file.nomalizedPath = [file.author, file.bookFloder].join('/')
+      } else {
+        file.nomalizedPath = [file.author, series.series + (series.sequence === null ? '' : '#' + series.sequence), file.bookFloder].join('/')
+      }
+      if (file.nomalizedPath === file.relPath) {
+        file.leftSide = true
+      } else {
+        file.leftSide = false
+      }
     }
   },
   mounted() {

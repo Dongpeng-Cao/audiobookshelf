@@ -1025,35 +1025,35 @@ class LibraryController {
             }
         }))?.path
 
-        // async function removeEmptyDirs(directory, libraryPath) {
-        //   try {
-        //     if (directory === libraryPath) {
-        //       Logger.info(`Reached libraryPath: ${libraryPath}, stopping recursion.`);
-        //       return;
-        //     }
-        //     const files = await fs.readdir(directory);
+        async function removeEmptyDirs(directory, libraryPath) {
+          try {
+            if (directory === libraryPath) {
+              Logger.info(`Reached libraryPath: ${libraryPath}, stopping recursion.`);
+              return;
+            }
+            const files = await fs.readdir(directory);
             
-        //     if (files.length > 0) {
-        //       Logger.info(`Directory ${directory} is not empty, stopping.`);
-        //       return;
-        //     }
+            if (files.length > 0) {
+              Logger.info(`Directory ${directory} is not empty, stopping.`);
+              return;
+            }
         
-        //     // dir is empty, delete it
-        //     await fs.rmdir(directory);
-        //     Logger.info(`Directory ${directory} was empty and has been removed.`);
+            // dir is empty, delete it
+            await fs.rmdir(directory);
+            Logger.info(`Directory ${directory} was empty and has been removed.`);
         
-        //     // get parent dir
-        //     const parentDir = Path.dirname(directory);
+            // get parent dir
+            const parentDir = Path.dirname(directory);
         
-        //     if (parentDir === directory) {
-        //       return;
-        //     }
+            if (parentDir === directory) {
+              return;
+            }
         
-        //     await removeEmptyDirs(parentDir, libraryPath);
-        //   } catch (error) {
-        //     Logger.error(`Error removing directory ${directory}:`, error);
-        //   }
-        // }
+            await removeEmptyDirs(parentDir, libraryPath);
+          } catch (error) {
+            Logger.error(`Error removing directory ${directory}:`, error);
+          }
+        }
 
         for(let item of normalizedFiles){
           const currentPath = Path.join(libraryPath, item.relPath);
@@ -1063,7 +1063,7 @@ class LibraryController {
             Logger.info(`Successfully moved folder from ${currentPath} to ${targetPath}`);
 
             // not need this function probabliy 
-            //await removeEmptyDirs(currentPath, libraryPath)
+            await removeEmptyDirs(Path.dirname(currentPath), libraryPath)
             
             const itemMetaData = await Database.libraryItemModel.findOne({
               attributes: ['libraryFiles'],
@@ -1147,6 +1147,12 @@ class LibraryController {
             }
           )
         })
+        temp.series.push(
+          {
+            sequence : null,
+            series: 'No Series'
+          }
+        )
 
         //temp.nomalizedPath = [temp.author, temp.series, item.relPath.split('/').pop()].join('/')
         temp.bookFloder = item.relPath.split('/').pop()
