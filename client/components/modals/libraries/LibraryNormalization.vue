@@ -10,7 +10,7 @@
               </p>
               <ul v-if="file.hover" class="absolute left-10 top-1/2 bg-gray-700 mt-2 p-2 border border-gray-300 shadow-lg z-10" @mouseenter="showDropdown(file)" @mouseleave="hideDropdown(file)" :key="file.id + 'list'">
                 <template v-for="(series, index) in file.series">
-                  <li @click="normalizePath(file, series)" :key="index">{{ series.series }}{{ series.sequence === null ? '' : ' #' + series.sequence }}</li>
+                  <li class="hover:bg-gray-900" @click="normalizePath(file, series)" :key="index">{{ series.series }}{{ series.sequence === null ? '' : ' #' + series.sequence }}</li>
                 </template>
               </ul>
             </div>
@@ -59,10 +59,20 @@ export default {
   },
   methods: {
     normalization(normalization) {
-      this.$axios.$post(`/api/libraries/${this.libraryId}/files-normalization?normalization=${normalization}`, this.filesList).catch((error) => {
-        console.error(error)
-        this.$toast.error(error)
-      })
+      this.$axios
+        .$post(`/api/libraries/${this.libraryId}/files-normalization?normalization=${normalization}`, this.filesList)
+        .catch((error) => {
+          console.error(error)
+          this.$toast.error(error)
+        })
+        .then((data) => {
+          if (data.files) {
+            this.filesList = data.files
+          }
+        })
+        .catch((error) => {
+          this.$toast.error('Failed to remove metadata files')
+        })
     },
     fetchFiles(normalization) {
       this.$axios
@@ -72,7 +82,6 @@ export default {
             this.$toast.info(`No files were found in library`)
           } else {
             this.filesList = data.files
-            this.$toast.success(`Successfully load files`)
           }
         })
         .catch((error) => {

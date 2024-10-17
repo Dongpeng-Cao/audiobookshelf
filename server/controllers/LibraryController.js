@@ -1011,10 +1011,94 @@ class LibraryController {
       return res.sendStatus(403)
     }
 
+    let files = []
     const filesNormalization = req.query.normalization 
-    if(filesNormalization){
+    if(filesNormalization === 'true'){
       let fileList = req.body
+      const normalizedFiles = fileList.filter(item => item.leftSide === false)
+      if(normalizedFiles.length > 0){
+        const libraryPath = (await Database.libraryFolderModel.findOne({
+          attributes: ['path'],
+          where: 
+            {
+              libraryId: req.library.id
+            }
+        }))?.path
+
+        // async function removeEmptyDirs(directory, libraryPath) {
+        //   try {
+        //     if (directory === libraryPath) {
+        //       Logger.info(`Reached libraryPath: ${libraryPath}, stopping recursion.`);
+        //       return;
+        //     }
+        //     const files = await fs.readdir(directory);
+            
+        //     if (files.length > 0) {
+        //       Logger.info(`Directory ${directory} is not empty, stopping.`);
+        //       return;
+        //     }
+        
+        //     // dir is empty, delete it
+        //     await fs.rmdir(directory);
+        //     Logger.info(`Directory ${directory} was empty and has been removed.`);
+        
+        //     // get parent dir
+        //     const parentDir = Path.dirname(directory);
+        
+        //     if (parentDir === directory) {
+        //       return;
+        //     }
+        
+        //     await removeEmptyDirs(parentDir, libraryPath);
+        //   } catch (error) {
+        //     Logger.error(`Error removing directory ${directory}:`, error);
+        //   }
+        // }
+
+        for(let item of normalizedFiles){
+          const currentPath = Path.join(libraryPath, item.relPath);
+          const targetPath = Path.join(libraryPath, item.nomalizedPath);
+          try {
+            await fs.move(currentPath, targetPath, { overwrite: true });
+            Logger.info(`Successfully moved folder from ${currentPath} to ${targetPath}`);
+
+            // not need this function probabliy 
+            //await removeEmptyDirs(currentPath, libraryPath)
+            
+            const itemMetaData = await Database.libraryItemModel.findOne({
+              attributes: ['libraryFiles'],
+              where: { mediaId : item.id }
+            });
+
+            const libraryFiles = itemMetaData?.libraryFiles;
+
+            libraryFiles.forEach(item => {
+              item.metadata.path = Path.join(targetPath, item.metadata.filename)
+            })
+
+            //update item in libraryItem table
+            await Database.libraryItemModel.update(
+              {
+                path : targetPath,
+                relPath : item.nomalizedPath,
+                libraryFiles : libraryFiles
+              },
+              {
+                where : {
+                  mediaId : item.id
+                }
+              }
+            )
+
+
+          } catch (error) {
+            Logger.error(`Error moving folder: ${error.message}`);
+          }
+        }
+      }
+
     }
+    
     const libraryItems = await Database.libraryItemModel.findAll({
       attributes: ['id', 'libraryFiles', 'relPath', 'mediaId'],
       where: 
@@ -1022,22 +1106,6 @@ class LibraryController {
           libraryId: req.library.id
         }
     })
-
-    let files = []
-    // libraryItems.forEach(item =>{
-    //   if(filesNormalization){
-        
-    //   }
-    //   let indent = ''
-    //   const folder = item.relPath.split('/')
-    //   for(let i=0; i<folder.length; i++){
-    //     files.push(indent + '|-- ' + folder[i])
-    //     indent += '    '
-    //   }
-    //   item.libraryFiles.forEach((file) => {
-    //     files.push(indent + '|-- ' + file.metadata.filename)
-    //   })
-    // })
 
     for (const item of libraryItems){
         let temp = {}
@@ -1087,12 +1155,8 @@ class LibraryController {
         temp.hover = false // this is important otherwise vue would not bind this attr and not rerender
         files.push(temp)
     }
-
+    
  
-
-    //Logger.info(`[LibraryController] Found ${libraryItemsWithMetadata.length} ${metadataFilename} files to remove`)
-
-
     res.json({
       files,
       status: 'ok'
